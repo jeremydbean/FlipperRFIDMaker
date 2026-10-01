@@ -11,6 +11,7 @@ RFID Maker provides a decimal alternative to the built-in RFID app's **Add manua
 ## Features
 
 - 18 decimal presets, with range checks and extra fields where a format requires them.
+- Blank card-number entries for new cards, a numeric keypad for every decimal field, and replacement on the first digit when editing existing values.
 - HEX preview, verified Proxmark ID/raw values, and the firmware's interpretation of the generated data.
 - Import existing RFID files and automatically fill supported decimal fields.
 - Advanced HEX editing for other protocols and layouts supported by the firmware.
@@ -20,17 +21,17 @@ RFID Maker provides a decimal alternative to the built-in RFID app's **Add manua
 
 ## Compatibility
 
-The downloadable **v0.8** binary targets **Momentum mntm-012, Flipper Zero F7, API 87.1**. Other firmware versions may require rebuilding against their own SDK. A separate binary has also been built and passed SDK import checks against **official firmware 1.4.3 (F7 / API 87.1)**. Physical-device checks on that official release remain before catalog submission.
+The downloadable **v0.9** binary targets **Momentum mntm-012, Flipper Zero F7, API 87.1**. Other firmware versions may require rebuilding against their own SDK. A separate binary has also been built and passed SDK import checks against **official firmware 1.4.3 (F7 / API 87.1)**. Physical-device checks on that official release remain pending. The catalog submission is [PR #1274](https://github.com/flipperdevices/flipper-application-catalog/pull/1274).
 
 This app uses the low-frequency RFID subsystem. It does not handle 13.56 MHz NFC cards. Some RFID protocols use an ID rather than a facility code; the app shows the fields appropriate to the selected preset.
 
 ## Install and use
 
-[Download v0.8 for Momentum mntm-012](https://github.com/jeremydbean/FlipperRFIDMaker/raw/refs/heads/main/dist/rfid_maker.fap) | [Download v0.8 for official firmware 1.4.3](https://github.com/jeremydbean/FlipperRFIDMaker/raw/refs/heads/main/dist/official/rfid_maker.fap)
+[Download v0.9 for Momentum mntm-012](https://github.com/jeremydbean/FlipperRFIDMaker/raw/refs/heads/main/dist/rfid_maker.fap) | [Download v0.9 for official firmware 1.4.3](https://github.com/jeremydbean/FlipperRFIDMaker/raw/refs/heads/main/dist/official/rfid_maker.fap)
 
 1. Download the binary matching your firmware and copy `rfid_maker.fap` to `SD/apps/RFID/rfid_maker.fap` using qFlipper or an SD card reader.
 2. Open **Apps -> RFID -> RFID Maker**.
-3. Select a format and edit its decimal fields. Most fields use the numeric keypad. Wide IDs use decimal text entry because Flipper's numeric keypad API is limited to signed 32-bit values.
+3. Select a format and edit its decimal fields. Every decimal field uses the numeric keypad and displays its valid range. New card numbers/IDs start blank and must be entered before previewing, saving or emulating. For existing values, the first digit replaces the displayed value; select **Del** first to edit it instead. Back cancels without changing the saved value.
 4. Select **Show HEX / details** to see the exact bytes that will be stored in the `.rfid` file and the firmware's interpretation of those bytes. Back returns to the fields.
 5. Select **Save .rfid**, enter a name without the extension, and save. Files go to `SD/lfrfid/<name>.rfid`. Existing names are rejected rather than overwritten.
 6. Open the saved file through the normal RFID app, or select **Emulate** here. Back stops emulation.
@@ -150,6 +151,7 @@ The resulting binary is `dist/rfid_maker.fap`. Use a separate `UFBT_HOME` if you
 ## Validation
 
 - Successful builds and SDK import checks for official firmware 1.4.3 and Momentum mntm-012, F7 / API 87.1.
+- ARM keypad event tests for all 42 fields across 18 presets: full field maxima, blank input, replacement, zero, overflow, deletion, minimum prefixes, cancellation and repeated OK. Controller tests cover required new card numbers and retaining loaded values.
 - The actual ARM C encoders and decoders executed in Unicorn: **1,836 round-trip vectors across all 18 presets**, including minimum/maximum and deterministic random values.
 - Checked against independent Python bit-layout calculations, including Indala parity/checksum, AWID Wiegand parity, Keri bit mapping, Paradox CRC, GProx framing, and HID H10306 framing.
 - Checked invalid field values, wrong buffer sizes, output buffer bounds, and 13 decimal parser cases including 64-bit overflow.
@@ -165,6 +167,7 @@ To rerun:
 python -m pip install unicorn pyelftools
 python tests/test_formats.py /path/to/arm-none-eabi-gcc
 python tests/test_import.py /path/to/arm-none-eabi-gcc /path/to/sdk_headers
+python tests/test_decimal_input.py /path/to/arm-none-eabi-gcc /path/to/sdk_headers
 python tests/test_proxmark.py /path/to/arm-none-eabi-gcc /path/to/proxmark3-source
 ```
 

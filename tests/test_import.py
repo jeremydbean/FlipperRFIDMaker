@@ -25,6 +25,8 @@ static struct FuriString strings[8];
 static unsigned allocated, mode, running, dialog_calls, pending, in_input, bad_callback;
 static unsigned blink_starts, blink_stops, worker_starts, worker_stops, emulation_starts, thread_stops;
 static unsigned led[3], notification_calls;
+static bool entry_blank;
+static uint64_t entry_max;
 const NotificationMessage message_blink_stop = {.type=NotificationMessageTypeLedBlinkStop};
 const NotificationMessage message_red_255 = {.type=NotificationMessageTypeLedRed,.data.led.value=255};
 const NotificationMessage message_green_0 = {.type=NotificationMessageTypeLedGreen,.data.led.value=0};
@@ -38,6 +40,18 @@ uint32_t state[10];
 size_t strlen(const char* p) { size_t n=0; while(p[n]) ++n; return n; }
 int strcmp(const char* a, const char* b) {
     while(*a && *a==*b) { ++a; ++b; } return (unsigned char)*a-(unsigned char)*b;
+}
+int strncmp(const char* a, const char* b, size_t n) {
+    for(size_t i=0; i<n; ++i) {
+        if(a[i]!=b[i] || !a[i]) return (unsigned char)a[i]-(unsigned char)b[i];
+    }
+    return 0;
+}
+void decimal_input_configure(DecimalInput* input, const char* header, uint64_t value,
+                             uint64_t min, uint64_t max, bool blank,
+                             DecimalInputCallback callback, void* context) {
+    (void)input; (void)header; (void)value; (void)min; (void)callback; (void)context;
+    entry_blank=blank; entry_max=max;
 }
 FuriString* furi_string_alloc(void) {
     FuriString* s=&strings[allocated++]; s->text[0]=0; return s;
@@ -126,6 +140,7 @@ unsigned test_emulation(void) {
     uint8_t data[64]; app.data=data; app.capacity=sizeof(data);
     app.page=PageForm; app.protocol=LFRFIDProtocolAwid; app.size=9;
     app.format=&card_formats[6]; app.values[0]=5; app.values[1]=1234;
+    memset(app.field_entered,true,sizeof(app.field_entered));
     app.display=furi_string_alloc(); app.source_path=furi_string_alloc();
     menu_callback(&app,ActionEmulate);
     if(!app.emulating || !app.blink_on || app.page!=PageEmulate || blink_starts!=1 || blink_stops ||
@@ -171,6 +186,29 @@ unsigned test_open(unsigned test_mode) {
     if(mode==2) { back_callback(&app); state[4]=app.page; state[0]=running; }
     return 1;
 }
+unsigned test_fields(void) {
+    for(size_t f=0; f<card_format_count; ++f) {
+        allocated=0;
+        Maker app; memset(&app,0,sizeof(app));
+        app.source_path=furi_string_alloc(); app.display=furi_string_alloc(); app.page=PageTypes;
+        menu_callback(&app,f);
+        for(size_t i=0; i<app.format->count; ++i) {
+            bool card_field=strncmp(app.format->fields[i].label,"Card ",5)==0;
+            if(app.field_entered[i]==card_field || (card_field && app.values[i])) return 1;
+            edit_field(&app,i);
+            if(entry_blank!=card_field || entry_max!=app.format->fields[i].max) return 2;
+            back_callback(&app);
+            if(app.field_entered[i]==card_field) return 3; // Cancel preserves entry state.
+        }
+        if(prepare(&app) || app.page!=PageStatus) return 4; // No accidental default credential.
+        for(size_t i=0; i<app.format->count; ++i) {
+            app.field=i; number_done(&app,app.format->fields[i].max);
+            if(!app.field_entered[i] || app.values[i]!=app.format->fields[i].max) return 5;
+            edit_field(&app,i); if(entry_blank) return 6;
+        }
+    }
+    return 0;
+}
 '''
 
 def main():
@@ -198,7 +236,7 @@ def main():
                         '-ffunction-sections','-fdata-sections','-fno-builtin','-nostdlib',
                         '-DSTM32WB','-DSTM32WB55xx','-DFURI_NDEBUG','-DNDEBUG',
                         '-I'+str(ROOT),*includes,str(folder/'harness.c'),str(ROOT/'card_formats.c'),
-                        '-Wl,-Ttext=0x10000','-Wl,-e,test_open','-Wl,--gc-sections','-Wl,--undefined=test_emulation',
+                        '-Wl,-Ttext=0x10000','-Wl,-e,test_open','-Wl,--gc-sections','-Wl,--undefined=test_emulation','-Wl,--undefined=test_fields',
                         '-Wl,--unresolved-symbols=ignore-all','-o',str(elf_path),'-lgcc'],check=True)
         elf=ELFFile(io.BytesIO(elf_path.read_bytes()))
         symbols={s.name:s['st_value'] for s in elf.get_section_by_name('.symtab').iter_symbols()}
@@ -222,7 +260,10 @@ def main():
         emu.reg_write(UC_ARM_REG_SP,0x200000); emu.reg_write(UC_ARM_REG_LR,0x400001)
         emu.emu_start(symbols['test_emulation']|1,0x400000,count=1000000)
         assert emu.reg_read(UC_ARM_REG_R0)==1, 'emulation LED/worker lifecycle failed'
+        emu.reg_write(UC_ARM_REG_SP,0x200000); emu.reg_write(UC_ARM_REG_LR,0x400001)
+        emu.emu_start(symbols['test_fields']|1,0x400000,count=1000000)
+        assert emu.reg_read(UC_ARM_REG_R0)==0, 'blank/reopen/cancel/required numeric-field lifecycle failed'
         if len(sys.argv)>3: assert sample.read_bytes()==original
-        print('PASS: actual ARM import and emulation controllers: valid AWID, cancel/error/raw fallback; dispatcher stays running; 10 ms on / 100 ms period ticks override USB green; Back restores charging green; worker start/stop/restart/cleanup lifecycle.')
+        print('PASS: actual ARM import/emulation controllers and all 18 preset field lifecycles: blank new card, cancel, required value, full-range commit/reopen; valid AWID, cancel/error/raw fallback; dispatcher stays running; 10 ms on / 100 ms LED ticks override USB green; Back restores charging green; worker lifecycle.')
 
 if __name__=='__main__': main()

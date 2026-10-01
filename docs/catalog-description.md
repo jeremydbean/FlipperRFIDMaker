@@ -7,6 +7,7 @@ Create and edit 125 kHz RFID files using decimal facility codes and card numbers
 ## Features
 
 - 18 decimal presets with field limits and additional fields where required.
+- Blank new card-number entries and a numeric keypad showing each field's valid range. Typing replaces an existing value; Del edits it.
 - Open existing .rfid files and automatically fill supported decimal forms.
 - Preserve unsupported layouts in the advanced HEX editor.
 - Save edited copies without overwriting the original file.

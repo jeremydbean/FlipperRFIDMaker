@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "card_formats.h"
+#include "decimal_input.h"
 #include <dialogs/dialogs.h>
 #include <furi.h>
 #include <gui/gui.h>
 #include <gui/modules/byte_input.h>
-#include <gui/modules/number_input.h>
 #include <gui/modules/submenu.h>
 #include <gui/modules/text_box.h>
 #include <gui/modules/text_input.h>
@@ -55,7 +55,7 @@ typedef struct {
     TextInput *input;
     TextBox *text;
     ByteInput *bytes;
-    NumberInput *number;
+    DecimalInput *number;
     ProtocolDict *dict;
     LFRFIDWorker *worker;
     FuriString *display;
@@ -64,6 +64,7 @@ typedef struct {
     const CardFormat *format;
     ProtocolId protocol;
     uint64_t values[CARD_MAX_FIELDS];
+    bool field_entered[CARD_MAX_FIELDS];
     uint8_t *data;
     size_t size;
     size_t capacity;
@@ -133,6 +134,8 @@ static void open_card(Maker *app) {
             break;
         }
     }
+    // Loaded credentials already have meaningful values, including zero.
+    memset(app->field_entered, true, sizeof(app->field_entered));
     show_form(app);
     if(!app->format) {
         furi_string_printf(
@@ -166,6 +169,16 @@ static void show_text(Maker *app, Page page) {
     view_dispatcher_switch_to_view(app->dispatcher, ViewText);
 }
 static bool prepare(Maker *app) {
+    if(app->format) {
+        for(size_t i = 0; i < app->format->count; ++i) {
+            if(!app->field_entered[i]) {
+                furi_string_printf(app->display, "Enter %s first.\n\nBack: return to fields",
+                                   app->format->fields[i].label);
+                show_text(app, PageStatus);
+                return false;
+            }
+        }
+    }
     if(app->format && !card_encode(app->format, app->values, app->data, app->size)) {
         furi_string_set(app->display, "Cannot encode this format.\nValues or SDK layout mismatch.");
         show_text(app, PageStatus);
@@ -230,9 +243,10 @@ static void bytes_done(void *context) {
     Maker *app = context;
     view_dispatcher_send_custom_event(app->dispatcher, EventBytes);
 }
-static void number_done(void *context, int32_t value) {
+static void number_done(void *context, uint64_t value) {
     Maker *app = context;
-    app->values[app->field] = (uint64_t)value;
+    app->values[app->field] = value;
+    app->field_entered[app->field] = true;
     view_dispatcher_send_custom_event(app->dispatcher, EventNumber);
 }
 static bool input_validator(const char *text, FuriString *error, void *context) {
@@ -268,21 +282,11 @@ static bool input_validator(const char *text, FuriString *error, void *context) 
 static void edit_field(Maker *app, size_t field) {
     app->field = field;
     app->page = PageField;
-    snprintf(app->buffer, sizeof(app->buffer), "%llu", app->values[field]);
     snprintf(app->header, sizeof(app->header), "%s (decimal)", app->format->fields[field].label);
     const CardField *limits = &app->format->fields[field];
-    if(limits->max <= INT32_MAX) {
-        number_input_set_header_text(app->number, app->header);
-        number_input_set_result_callback(app->number, number_done, app, app->values[field],
-                                         limits->min, limits->max);
-        view_dispatcher_switch_to_view(app->dispatcher, ViewNumber);
-        return;
-    }
-    text_input_reset(app->input);
-    text_input_set_header_text(app->input, app->header);
-    text_input_set_result_callback(app->input, input_done, app, app->buffer, 21, true);
-    text_input_set_validator(app->input, input_validator, app);
-    view_dispatcher_switch_to_view(app->dispatcher, ViewInput);
+    decimal_input_configure(app->number, app->header, app->values[field], limits->min, limits->max,
+                            !app->field_entered[field], number_done, app);
+    view_dispatcher_switch_to_view(app->dispatcher, ViewNumber);
 }
 static void edit_bytes(Maker *app) {
     app->page = PageBytes;
@@ -352,7 +356,7 @@ static void menu_callback(void *context, uint32_t index) {
         }
         if(index == ActionAbout) {
             furi_string_set(app->display,
-                            "RFID Maker v0.8\n\nCreated by: KindaCharming\n\n"
+                            "RFID Maker v0.9\n\nCreated by: KindaCharming\n\n"
                             "Create and edit 125 kHz RFID files using decimal values.\n\n"
                             "GPL-3.0-or-later\n\nBack: type menu");
             show_text(app, PageAbout);
@@ -366,8 +370,13 @@ static void menu_callback(void *context, uint32_t index) {
         furi_string_reset(app->source_path);
         app->protocol = protocol_dict_get_protocol_by_name(app->dict, app->format->protocol);
         app->size = protocol_dict_get_data_size(app->dict, app->protocol);
-        for(size_t i = 0; i < app->format->count; ++i)
+        for(size_t i = 0; i < app->format->count; ++i) {
             app->values[i] = app->format->fields[i].initial;
+            bool card_field = strncmp(app->format->fields[i].label, "Card ", 5) == 0;
+            app->field_entered[i] = !card_field;
+            if(card_field)
+                app->values[i] = 0;
+        }
         show_form(app);
     } else if(app->page == PageRawTypes) {
         app->format = NULL;
@@ -392,7 +401,7 @@ static void menu_callback(void *context, uint32_t index) {
             app->blink_on = true;
             app->blink_ticks = 0;
             notification_message_block(app->notifications, &rfid_led_on);
-            furi_string_printf(app->display, "Emulating (v0.8)\n\n%s\n\nBack: stop emulation",
+            furi_string_printf(app->display, "Emulating (v0.9)\n\n%s\n\nBack: stop emulation",
                                protocol_dict_get_name(app->dict, app->protocol));
             show_text(app, PageEmulate);
         }
@@ -401,7 +410,7 @@ static void menu_callback(void *context, uint32_t index) {
 static void show_types(Maker *app) {
     app->page = PageTypes;
     submenu_reset(app->menu);
-    submenu_set_header(app->menu, "RFID Maker v0.8");
+    submenu_set_header(app->menu, "RFID Maker v0.9");
     submenu_add_item(app->menu, "Open existing .rfid", ActionOpen, menu_callback, app);
     for(size_t i = 0; i < card_format_count; ++i) {
         ProtocolId id = protocol_dict_get_protocol_by_name(app->dict, card_formats[i].protocol);
@@ -428,8 +437,11 @@ static void show_form(Maker *app) {
     if(app->format) {
         for(size_t i = 0; i < app->format->count; ++i) {
             char label[64];
-            snprintf(label, sizeof(label), "%s: %llu", app->format->fields[i].label,
-                     app->values[i]);
+            if(app->field_entered[i])
+                snprintf(label, sizeof(label), "%s: %llu", app->format->fields[i].label,
+                         app->values[i]);
+            else
+                snprintf(label, sizeof(label), "%s: <enter>", app->format->fields[i].label);
             submenu_add_item(app->menu, label, i, menu_callback, app);
         }
     } else
@@ -520,7 +532,7 @@ int32_t rfid_maker_app(void *p) {
     app->input = text_input_alloc();
     app->text = text_box_alloc();
     app->bytes = byte_input_alloc();
-    app->number = number_input_alloc();
+    app->number = decimal_input_alloc();
     app->dispatcher = view_dispatcher_alloc();
     view_dispatcher_set_event_callback_context(app->dispatcher, app);
     view_dispatcher_set_navigation_event_callback(app->dispatcher, back_callback);
@@ -530,7 +542,7 @@ int32_t rfid_maker_app(void *p) {
     view_dispatcher_add_view(app->dispatcher, ViewInput, text_input_get_view(app->input));
     view_dispatcher_add_view(app->dispatcher, ViewText, text_box_get_view(app->text));
     view_dispatcher_add_view(app->dispatcher, ViewBytes, byte_input_get_view(app->bytes));
-    view_dispatcher_add_view(app->dispatcher, ViewNumber, number_input_get_view(app->number));
+    view_dispatcher_add_view(app->dispatcher, ViewNumber, decimal_input_get_view(app->number));
     view_dispatcher_attach_to_gui(app->dispatcher, app->gui, ViewDispatcherTypeFullscreen);
     show_types(app);
     view_dispatcher_run(app->dispatcher);
@@ -542,7 +554,7 @@ int32_t rfid_maker_app(void *p) {
     text_input_free(app->input);
     text_box_free(app->text);
     byte_input_free(app->bytes);
-    number_input_free(app->number);
+    decimal_input_free(app->number);
     furi_string_free(app->display);
     furi_string_free(app->source_path);
     furi_string_free(app->browse_path);

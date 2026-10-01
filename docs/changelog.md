@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.9
+
+- New card numbers, IDs and card-data entries start blank; missing entries cannot be saved or emulated.
+- Existing values are replaced by the first typed digit, or edited by selecting Del first.
+- Replaced firmware-dependent numeric input with a full-width decimal keypad for all presets, including wide IDs.
+- Displayed the protocol field's allowed range without changing its bit layout or truncating values.
+- Tested all 42 decimal fields across 18 presets, including five-digit Indala card numbers and wide IDs.
+
 ## v0.8
 
 - Added Proxmark ID/raw HEX for seven presets and H10301 sheet-style HEX.

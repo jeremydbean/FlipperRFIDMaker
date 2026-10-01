@@ -1,6 +1,6 @@
 # Apps Catalog submission preparation
 
-RFID Maker v0.8 has not been submitted to the catalog. This checklist records what is ready and what remains.
+RFID Maker is submitted for review in [catalog PR #1274](https://github.com/flipperdevices/flipper-application-catalog/pull/1274). v0.9 adds the numeric-entry fixes. Physical-device testing on official firmware remains pending and is disclosed in the submission.
 
 ## Ready
 
@@ -15,8 +15,8 @@ RFID Maker v0.8 has not been submitted to the catalog. This checklist records wh
 
 ## Still required
 
-- Check v0.8 on a physical Flipper running the supported official firmware: opening, editing, HEX preview, saving, emulation, Back, About, and exit.
-- Optionally refresh the screenshots to v0.8 and add About/HEX previews using qFlipper **Save Screenshot**, retaining the original dimensions and format. Existing exports show v0.7.
+- Check v0.9 on a physical Flipper running the supported official firmware: opening, editing, blank numeric entries, full field limits, HEX preview, saving, emulation, Back, About, and exit.
+- Optionally refresh the screenshots to v0.9 and add About/HEX previews using qFlipper **Save Screenshot**, retaining the original dimensions and format. Existing exports show v0.7.
 - Pin the submission manifest to the source commit containing those exports and the final tested app.
 - Check that `rfid_maker` is available in the catalog and run its bundle validator.
 
