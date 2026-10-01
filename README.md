@@ -4,7 +4,7 @@ Created by: **KindaCharming**
 
 Create and edit Flipper Zero **125 kHz RFID** files using decimal facility codes and card numbers.
 
-**Choose a type â†’ enter facility code and card number â†’ preview HEX â†’ save or emulate.**
+**Choose a type -> enter facility code and card number -> preview HEX -> save or emulate.**
 
 RFID Maker provides a decimal alternative to the built-in RFID app's **Add manually** workflow. It can also open existing `.rfid` files, recognize supported layouts, and save edited copies.
 
@@ -26,10 +26,10 @@ This app uses the low-frequency RFID subsystem. It does not handle 13.56 MHz NFC
 
 ## Install and use
 
-[Download v0.8 for Momentum mntm-012](https://github.com/jeremydbean/FlipperRFIDMaker/raw/refs/heads/main/dist/rfid_maker.fap) · [Download v0.8 for official firmware 1.4.3](https://github.com/jeremydbean/FlipperRFIDMaker/raw/refs/heads/main/dist/official/rfid_maker.fap)
+[Download v0.8 for Momentum mntm-012](https://github.com/jeremydbean/FlipperRFIDMaker/raw/refs/heads/main/dist/rfid_maker.fap) | [Download v0.8 for official firmware 1.4.3](https://github.com/jeremydbean/FlipperRFIDMaker/raw/refs/heads/main/dist/official/rfid_maker.fap)
 
 1. Download the binary matching your firmware and copy `rfid_maker.fap` to `SD/apps/RFID/rfid_maker.fap` using qFlipper or an SD card reader.
-2. Open **Apps Ã¢â€ â€™ RFID Ã¢â€ â€™ RFID Maker**.
+2. Open **Apps -> RFID -> RFID Maker**.
 3. Select a format and edit its decimal fields. Most fields use the numeric keypad. Wide IDs use decimal text entry because Flipper's numeric keypad API is limited to signed 32-bit values.
 4. Select **Show HEX / details** to see the exact bytes that will be stored in the `.rfid` file and the firmware's interpretation of those bytes. Back returns to the fields.
 5. Select **Save .rfid**, enter a name without the extension, and save. Files go to `SD/lfrfid/<name>.rfid`. Existing names are rejected rather than overwritten.
@@ -53,21 +53,21 @@ The included binary targets mntm-012. If your installed firmware reports an API 
 
 | Type | Decimal inputs |
 | --- | --- |
-| HID H10301, 26-bit | FC 0Ã¢â‚¬â€œ255; card 0Ã¢â‚¬â€œ65535 |
-| EM4100, RF/64, RF/32, RF/16 | FC 0Ã¢â‚¬â€œ255; card 0Ã¢â‚¬â€œ65535; ID prefix 0Ã¢â‚¬â€œ65535 |
-| Indala, 26-bit | FC 0Ã¢â‚¬â€œ255; card 0Ã¢â‚¬â€œ65535 |
-| IO Prox XSF | FC 0Ã¢â‚¬â€œ255; card 0Ã¢â‚¬â€œ65535; version 0Ã¢â‚¬â€œ255 |
-| AWID, 26-bit | FC 0Ã¢â‚¬â€œ255; card 0Ã¢â‚¬â€œ65535 |
-| Pyramid, 26-bit | FC 0Ã¢â‚¬â€œ255; card 0Ã¢â‚¬â€œ65535 |
-| Gallagher | FC 0Ã¢â‚¬â€œ65535; card 0Ã¢â‚¬â€œ16777215; region and issue level 0Ã¢â‚¬â€œ15 |
-| Keri | FC 0Ã¢â‚¬â€œ31; card 0Ã¢â‚¬â€œ4194303 |
-| Securakey, 26-bit | FC 1Ã¢â‚¬â€œ255; card 0Ã¢â‚¬â€œ65535; two check bytes 0Ã¢â‚¬â€œ255 |
-| Viking / PAC/Stanley | Card ID 0Ã¢â‚¬â€œ4294967295; no facility code |
+| HID H10301, 26-bit | FC 0-255; card 0-65535 |
+| EM4100, RF/64, RF/32, RF/16 | FC 0-255; card 0-65535; ID prefix 0-65535 |
+| Indala, 26-bit | FC 0-255; card 0-65535 |
+| IO Prox XSF | FC 0-255; card 0-65535; version 0-255 |
+| AWID, 26-bit | FC 0-255; card 0-65535 |
+| Pyramid, 26-bit | FC 0-255; card 0-65535 |
+| Gallagher | FC 0-65535; card 0-16777215; region and issue level 0-15 |
+| Keri | FC 0-31; card 0-4194303 |
+| Securakey, 26-bit | FC 1-255; card 0-65535; two check bytes 0-255 |
+| Viking / PAC/Stanley | Card ID 0-4294967295; no facility code |
 | Jablotron | 40-bit card data as a decimal integer; no facility code |
 | IDTECK | 32-bit card ID; fixed IDTK factory word |
-| Paradox | FC 0Ã¢â‚¬â€œ255; card 0Ã¢â‚¬â€œ65535 |
-| GProx II, 26-bit | FC 0Ã¢â‚¬â€œ255; card 0Ã¢â‚¬â€œ65535; profile 0Ã¢â‚¬â€œ65535 |
-| HID H10306, 34-bit | FC 0Ã¢â‚¬â€œ65535; card 0Ã¢â‚¬â€œ65535 |
+| Paradox | FC 0-255; card 0-65535 |
+| GProx II, 26-bit | FC 0-255; card 0-65535; profile 0-65535 |
+| HID H10306, 34-bit | FC 0-65535; card 0-65535 |
 
 These are **18 presets**. A protocol name does not uniquely identify every possible card layout. AWID and HID can carry other layouts; this app's decimal presets support only the specified layouts.
 
