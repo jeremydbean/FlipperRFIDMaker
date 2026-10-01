@@ -1,0 +1,4 @@
+.vscode/
+dist/debug/
+.ufbt/
+__pycache__/

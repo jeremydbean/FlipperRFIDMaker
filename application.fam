@@ -1,0 +1,14 @@
+App(
+    appid="rfid_maker",
+    name="RFID Maker",
+    apptype=FlipperAppType.EXTERNAL,
+    entry_point="rfid_maker_app",
+    sources=["card_formats.c", "rfid_maker.c"],
+    requires=["gui"],
+    stack_size=4096,
+    fap_category="RFID",
+    fap_icon="icon.png",
+    fap_version="0.4",
+    fap_author="Jeremy Bean",
+    fap_description="Create RFID files from decimal facility codes and card numbers",
+)
