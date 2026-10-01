@@ -24,8 +24,14 @@ struct FuriString { char text[512]; };
 static struct FuriString strings[8];
 static unsigned allocated, mode, running, dialog_calls, pending, in_input, bad_callback;
 static unsigned blink_starts, blink_stops, worker_starts, worker_stops, emulation_starts, thread_stops;
-const NotificationSequence sequence_blink_start_magenta = {NULL};
-const NotificationSequence sequence_blink_stop = {NULL};
+static unsigned led[3], notification_calls;
+const NotificationMessage message_blink_stop = {.type=NotificationMessageTypeLedBlinkStop};
+const NotificationMessage message_red_255 = {.type=NotificationMessageTypeLedRed,.data.led.value=255};
+const NotificationMessage message_green_0 = {.type=NotificationMessageTypeLedGreen,.data.led.value=0};
+const NotificationMessage message_blue_255 = {.type=NotificationMessageTypeLedBlue,.data.led.value=255};
+const NotificationMessage message_red_0 = {.type=NotificationMessageTypeLedRed,.data.led.value=0};
+const NotificationMessage message_blue_0 = {.type=NotificationMessageTypeLedBlue,.data.led.value=0};
+const NotificationMessage message_do_not_reset = {.type=NotificationMessageTypeDoNotReset};
 uint8_t fixture[9];
 uint32_t state[10];
 
@@ -85,8 +91,22 @@ void view_dispatcher_send_custom_event(ViewDispatcher* d, uint32_t event) { (voi
 void view_dispatcher_stop(ViewDispatcher* d) { (void)d; running=0; }
 void notification_message(NotificationApp* n, const NotificationSequence* sequence) {
     (void)n;
-    if(sequence==&sequence_blink_start_magenta) ++blink_starts;
-    if(sequence==&sequence_blink_stop) ++blink_stops;
+    ++notification_calls;
+    if(sequence==&rfid_led_on) ++blink_starts;
+    if(sequence==&rfid_led_release) ++blink_stops;
+    bool reset=true;
+    for(unsigned i=0; (*sequence)[i]; ++i) {
+        const NotificationMessage* m=(*sequence)[i];
+        if(m->type==NotificationMessageTypeLedRed) led[0]=m->data.led.value;
+        if(m->type==NotificationMessageTypeLedGreen) led[1]=m->data.led.value;
+        if(m->type==NotificationMessageTypeLedBlue) led[2]=m->data.led.value;
+        if(m->type==NotificationMessageTypeDoNotReset) reset=false;
+    }
+    // Firmware releases the notification layer to the internal charging layer.
+    if(reset) { led[0]=0; led[1]=255; led[2]=0; }
+}
+void notification_message_block(NotificationApp* n, const NotificationSequence* sequence) {
+    notification_message(n,sequence);
 }
 void lfrfid_worker_start_thread(LFRFIDWorker* w) { (void)w; ++worker_starts; }
 void lfrfid_worker_emulate_start(LFRFIDWorker* w, LFRFIDProtocol protocol) {
@@ -99,7 +119,8 @@ void protocol_dict_set_data(ProtocolDict* d, size_t id, const uint8_t* data, siz
 }
 
 unsigned test_emulation(void) {
-    allocated=0; running=1;
+    allocated=0; running=1; notification_calls=0;
+    led[0]=0; led[1]=255; led[2]=0; // USB charging indicator.
     blink_starts=blink_stops=worker_starts=worker_stops=emulation_starts=thread_stops=0;
     Maker app; memset(&app,0,sizeof(app));
     uint8_t data[64]; app.data=data; app.capacity=sizeof(data);
@@ -107,16 +128,24 @@ unsigned test_emulation(void) {
     app.format=&card_formats[6]; app.values[0]=5; app.values[1]=1234;
     app.display=furi_string_alloc(); app.source_path=furi_string_alloc();
     menu_callback(&app,ActionEmulate);
-    if(!app.emulating || app.page!=PageEmulate || blink_starts!=1 || blink_stops ||
-       worker_starts!=1 || emulation_starts!=1) return 0;
+    if(!app.emulating || !app.blink_on || app.page!=PageEmulate || blink_starts!=1 || blink_stops ||
+       worker_starts!=1 || emulation_starts!=1 || led[0]!=255 || led[1]!=0 || led[2]!=255) return 0;
+    tick_callback(&app);
+    if(app.blink_on || led[0] || led[1] || led[2]) return 0;
+    tick_callback(&app);
+    if(!app.blink_on || led[0]!=255 || led[1]!=0 || led[2]!=255) return 0;
     back_callback(&app);
-    if(app.emulating || app.page!=PageForm || blink_stops!=1 || worker_stops!=1 || thread_stops!=1) return 0;
+    if(app.emulating || app.blink_on || app.page!=PageForm || blink_stops!=1 || worker_stops!=1 ||
+       thread_stops!=1 || led[0] || led[1]!=255 || led[2]) return 0;
+    unsigned calls=notification_calls;
+    tick_callback(&app);
     stop_emulating(&app);
-    if(blink_stops!=1 || worker_stops!=1 || thread_stops!=1) return 0;
+    if(notification_calls!=calls || blink_stops!=1 || worker_stops!=1 || thread_stops!=1) return 0;
     menu_callback(&app,ActionEmulate);
     stop_emulating(&app); // Same cleanup invoked when the app exits.
-    return !app.emulating && blink_starts==2 && blink_stops==2 && worker_starts==2 &&
-           worker_stops==2 && emulation_starts==2 && thread_stops==2;
+    return !app.emulating && blink_starts==3 && blink_stops==2 && worker_starts==2 &&
+           worker_stops==2 && emulation_starts==2 && thread_stops==2 &&
+           led[0]==0 && led[1]==255 && led[2]==0;
 }
 
 unsigned test_open(unsigned test_mode) {
@@ -190,6 +219,6 @@ def main():
         emu.emu_start(symbols['test_emulation']|1,0x400000,count=1000000)
         assert emu.reg_read(UC_ARM_REG_R0)==1, 'emulation LED/worker lifecycle failed'
         if len(sys.argv)>3: assert sample.read_bytes()==original
-        print('PASS: actual ARM import and emulation controllers: valid AWID, cancel/error/raw fallback; dispatcher stays running; magenta blink and worker start/stop/restart/cleanup lifecycle.')
+        print('PASS: actual ARM import and emulation controllers: valid AWID, cancel/error/raw fallback; dispatcher stays running; magenta/off ticks override USB green; Back restores charging green; worker start/stop/restart/cleanup lifecycle.')
 
 if __name__=='__main__': main()

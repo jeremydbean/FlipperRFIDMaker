@@ -70,7 +70,21 @@ typedef struct {
     char header[64];
     Page page;
     bool emulating;
+    bool blink_on;
 } Maker;
+
+// Own all three notification LED channels while emulating, so an underlying
+// charging/status green does not mask the pulse. Release them when finished.
+static const NotificationSequence rfid_led_on = {
+    &message_blink_stop, &message_red_255,      &message_green_0,
+    &message_blue_255,   &message_do_not_reset, NULL,
+};
+static const NotificationSequence rfid_led_off = {
+    &message_red_0, &message_green_0, &message_blue_0, &message_do_not_reset, NULL,
+};
+static const NotificationSequence rfid_led_release = {
+    &message_blink_stop, &message_red_0, &message_green_0, &message_blue_0, NULL,
+};
 
 static void show_types(Maker *app);
 static void show_form(Maker *app);
@@ -132,10 +146,12 @@ static void open_card(Maker *app) {
 
 static void stop_emulating(Maker *app) {
     if(app->emulating) {
-        notification_message(app->notifications, &sequence_blink_stop);
+        app->emulating = false;
+        app->blink_on = false;
+        // Wait for app-owned sequences to finish before the FAP can unload.
+        notification_message_block(app->notifications, &rfid_led_release);
         lfrfid_worker_stop(app->worker);
         lfrfid_worker_stop_thread(app->worker);
-        app->emulating = false;
     }
 }
 static void show_text(Maker *app, Page page) {
@@ -339,8 +355,9 @@ static void menu_callback(void *context, uint32_t index) {
             lfrfid_worker_start_thread(app->worker);
             lfrfid_worker_emulate_start(app->worker, (LFRFIDProtocol)app->protocol);
             app->emulating = true;
-            notification_message(app->notifications, &sequence_blink_start_magenta);
-            furi_string_printf(app->display, "Emulating\n\n%s\n\nBack: stop emulation",
+            app->blink_on = true;
+            notification_message_block(app->notifications, &rfid_led_on);
+            furi_string_printf(app->display, "Emulating (v0.6)\n\n%s\n\nBack: stop emulation",
                                protocol_dict_get_name(app->dict, app->protocol));
             show_text(app, PageEmulate);
         }
@@ -349,7 +366,7 @@ static void menu_callback(void *context, uint32_t index) {
 static void show_types(Maker *app) {
     app->page = PageTypes;
     submenu_reset(app->menu);
-    submenu_set_header(app->menu, "RFID Maker - type");
+    submenu_set_header(app->menu, "RFID Maker v0.6");
     submenu_add_item(app->menu, "Open existing .rfid", ActionOpen, menu_callback, app);
     for(size_t i = 0; i < card_format_count; ++i) {
         ProtocolId id = protocol_dict_get_protocol_by_name(app->dict, card_formats[i].protocol);
@@ -432,6 +449,17 @@ static bool custom_callback(void *context, uint32_t event) {
     }
     return false;
 }
+static void tick_callback(void *context) {
+    Maker *app = context;
+    if(!app->emulating)
+        return;
+    app->blink_on = !app->blink_on;
+    if(app->blink_on) {
+        notification_message(app->notifications, &rfid_led_on);
+    } else {
+        notification_message(app->notifications, &rfid_led_off);
+    }
+}
 int32_t rfid_maker_app(void *p) {
     UNUSED(p);
     Maker *app = malloc(sizeof(Maker));
@@ -456,6 +484,7 @@ int32_t rfid_maker_app(void *p) {
     view_dispatcher_set_event_callback_context(app->dispatcher, app);
     view_dispatcher_set_navigation_event_callback(app->dispatcher, back_callback);
     view_dispatcher_set_custom_event_callback(app->dispatcher, custom_callback);
+    view_dispatcher_set_tick_event_callback(app->dispatcher, tick_callback, furi_ms_to_ticks(250));
     view_dispatcher_add_view(app->dispatcher, ViewMenu, submenu_get_view(app->menu));
     view_dispatcher_add_view(app->dispatcher, ViewInput, text_input_get_view(app->input));
     view_dispatcher_add_view(app->dispatcher, ViewText, text_box_get_view(app->text));
