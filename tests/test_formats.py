@@ -19,7 +19,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 STUB = r'''
 #include "card_formats.h"
 uint64_t values[5], bounds[10], parsed, decoded[5];
-uint8_t output[64];
+uint8_t output[64], raw_output[32];
 char input[256];
 void* memset(void* p, int v, size_t n) {
     unsigned char* b = p; for(size_t i=0; i<n; ++i) b[i]=v; return p;
@@ -44,6 +44,14 @@ unsigned info(unsigned i) {
 unsigned probe(unsigned i, unsigned size) {
     memset(output, 0xA5, sizeof(output));
     return card_encode(&card_formats[i], values, output, size);
+}
+unsigned raw_probe(unsigned i, unsigned capacity) {
+    memset(raw_output, 0xA5, sizeof(raw_output));
+    return card_proxmark_raw(&card_formats[i], output, card_formats[i].size, raw_output, capacity);
+}
+unsigned raw_bad_size(unsigned i, unsigned size) {
+    memset(raw_output, 0xA5, sizeof(raw_output));
+    return card_proxmark_raw(&card_formats[i], output, size, raw_output, sizeof(raw_output));
 }
 unsigned parse_probe(void) { return card_parse_decimal(input, values[0], values[1], &parsed); }
 unsigned decode_probe(unsigned i, unsigned size) {
@@ -116,6 +124,24 @@ def reference(index, v):
         return packed([(1,7),(0,2),(1,1),((payload>>16).bit_count()%2,1),(payload,32),(1-(payload&65535).bit_count()%2,1)],6)
     raise AssertionError(index)
 
+def raw_reference(index, data, v):
+    if index == 0:
+        return ((1 << 37) | (1 << 26) | wg(*v[:2])).to_bytes(5,'big')
+    if index in (1,2,3): return data
+    if index == 4:
+        frame = (0xA000000080000000 | (bit(data,0,27) << 4) | bit(data,27,2))
+        return frame.to_bytes(8,'big')
+    if index == 6:
+        bits = f'{int.from_bytes(data,"big"):072b}'[:66]
+        groups = [bits[i:i+3] for i in range(0,66,3)]
+        frame = '00000001'+''.join(g+str(1-g.count('1')%2) for g in groups)
+        return int(frame,2).to_bytes(12,'big')
+    if index == 17:
+        payload = (v[0] << 16) | v[1]
+        wg34 = ((v[0].bit_count()%2) << 33) | (payload << 1) | (1-v[1].bit_count()%2)
+        return ((1 << 37) | (1 << 34) | wg34).to_bytes(5,'big')
+    return b''
+
 def main():
     compiler = str(pathlib.Path(sys.argv[1]).resolve())
     os.environ['PATH'] = str(pathlib.Path(compiler).parent) + os.pathsep + os.environ['PATH']
@@ -141,6 +167,7 @@ def main():
             return emu.reg_read(UC_ARM_REG_R0)
         rng=random.Random(1234)
         cases=0
+        raw_cases=0
         for index in range(18):
             metadata=call('info',index)
             size,count=metadata&255,metadata>>8
@@ -155,11 +182,23 @@ def main():
                 actual=bytes(emu.mem_read(symbols['output'],64))
                 assert actual[:size]==reference(index,values), (index,values,actual[:size].hex(),reference(index,values).hex())
                 assert actual[size:]==b'\xa5'*(64-size), 'buffer overrun'
+                expected_raw=raw_reference(index,actual[:size],values)
+                n=call('raw_probe',index,32)
+                assert n==len(expected_raw), ('raw size',index,n)
+                actual_raw=bytes(emu.mem_read(symbols['raw_output'],32))
+                assert actual_raw[:n]==expected_raw, ('Proxmark raw',index,values,actual_raw[:n].hex(),expected_raw.hex())
+                assert actual_raw[n:]==b'\xa5'*(32-n), 'raw buffer overrun or unsupported layout modified output'
+                if n:
+                    raw_cases+=1
+                    assert call('raw_probe',index,n-1)==0, 'short raw buffer accepted'
+                    assert bytes(emu.mem_read(symbols['raw_output'],32))==b'\xa5'*32
+
                 assert call('decode_probe',index,size)==1, ('decode',index,values)
                 decoded=struct.unpack('<5Q',emu.mem_read(symbols['decoded'],40))
                 assert list(decoded[:count])==values[:count], ('decode fields',index,decoded,values)
                 assert bytes(emu.mem_read(symbols['decoded']+count*8,40-count*8))==b'\xa5'*(40-count*8), 'decoder output overrun'
                 cases+=1
+            assert call('raw_bad_size',index,size-1)==0, 'incorrect raw source size accepted'
             assert call('probe',index,size-1)==0, 'incorrect size accepted'
             assert call('decode_probe',index,size-1)==0, 'incorrect decode size accepted'
             for field,(lo,hi) in enumerate(limits):
@@ -187,6 +226,6 @@ def main():
             emu.mem_write(symbols['values'],struct.pack('<5Q',lo,hi,0,0,0))
             assert bool(call('parse_probe'))==valid, ('parser',text)
             if valid: assert struct.unpack('<Q',emu.mem_read(symbols['parsed'],8))[0]==int(text)
-        print(f'PASS: {cases} ARM encode/decode vectors across 18 presets; 450 arbitrary payload preservation checks; field limits, buffer bounds, and {len(parser_cases)} parser cases.')
+        print(f'PASS: {cases} ARM encode/decode vectors across 18 presets; {raw_cases} Proxmark ID/raw vectors across 7 presets; 450 arbitrary payload preservation checks; field limits, buffer bounds, and {len(parser_cases)} parser cases.')
 
 if __name__=='__main__': main()

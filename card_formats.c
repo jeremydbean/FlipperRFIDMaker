@@ -197,6 +197,59 @@ static uint64_t wiegand26(uint64_t fc, uint64_t cn) {
     uint64_t value = (fc << 16) | cn;
     return ((uint64_t)parity(value >> 12) << 25) | (value << 1) | (parity(value & 4095) ^ 1);
 }
+size_t card_proxmark_raw(const CardFormat *f, const uint8_t *d, size_t size, uint8_t *raw,
+                         size_t capacity) {
+    if(!f || !d || !raw || size != f->size)
+        return 0;
+    size_t length;
+    switch(f->encoding) {
+    case CardHid26:
+    case CardHid34:
+    case CardEm:
+        length = 5;
+        break;
+    case CardIndala:
+        length = 8;
+        break;
+    case CardAwid:
+        length = 12;
+        break;
+    default:
+        return 0;
+    }
+    if(capacity < length)
+        return 0;
+    memset(raw, 0, length);
+    switch(f->encoding) {
+    case CardHid26:
+        // Proxmark HID transport: standard header, length sentinel, Wiegand parity.
+        put(raw, 0, 40, (UINT64_C(1) << 37) | (UINT64_C(1) << 26) | wiegand26(d[0], get(d, 8, 16)));
+        break;
+    case CardHid34:
+        put(raw, 0, 40, get(d, 0, 44));
+        break;
+    case CardEm:
+        // EM410x commands take the complete 40-bit ID, without RF parity/framing.
+        memcpy(raw, d, 5);
+        break;
+    case CardIndala:
+        raw[0] = 0xA0;
+        put(raw, 32, 1, 1);
+        put(raw, 33, 27, get(d, 0, 27));
+        put(raw, 62, 2, get(d, 27, 2));
+        break;
+    case CardAwid:
+        raw[0] = 1;
+        for(unsigned i = 0; i < 22; ++i) {
+            uint64_t group = get(d, i * 3, 3);
+            put(raw, 8 + i * 4, 4, (group << 1) | (parity(group) ^ 1));
+        }
+        break;
+    default:
+        return 0;
+    }
+    return length;
+}
 static uint8_t paradox_crc(uint64_t fc, uint64_t cn) {
     uint64_t payload = (fc << 16) | cn;
     uint8_t manchester[9] = {0};

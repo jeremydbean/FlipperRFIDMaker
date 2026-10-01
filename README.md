@@ -1,37 +1,40 @@
 # RFID Maker
 
+Created by: **KindaCharming**
+
 Create and edit Flipper Zero **125 kHz RFID** files using decimal facility codes and card numbers.
 
-**Choose a type → enter facility code and card number → preview HEX → save or emulate.**
+**Choose a type â†’ enter facility code and card number â†’ preview HEX â†’ save or emulate.**
 
 RFID Maker provides a decimal alternative to the built-in RFID app's **Add manually** workflow. It can also open existing `.rfid` files, recognize supported layouts, and save edited copies.
 
 ## Features
 
 - 18 decimal presets, with range checks and extra fields where a format requires them.
-- HEX preview and the firmware's interpretation of the generated data.
+- HEX preview, verified Proxmark ID/raw values, and the firmware's interpretation of the generated data.
 - Import existing RFID files and automatically fill supported decimal fields.
 - Advanced HEX editing for other protocols and layouts supported by the firmware.
 - Save new `.rfid` files without overwriting existing files.
 - Emulate directly from the app, with a magenta LED pulse and Back to stop.
-- Embedded monochrome app icon.
+- Embedded monochrome app icon and an **About** screen with creator credit.
 
 ## Compatibility
 
-The downloadable **v0.7** binary targets **Momentum mntm-012, Flipper Zero F7, API 87.1**. Other firmware versions may require rebuilding against their own SDK. Compatibility with current official firmware has not yet been validated.
+The downloadable **v0.8** binary targets **Momentum mntm-012, Flipper Zero F7, API 87.1**. Other firmware versions may require rebuilding against their own SDK. A separate binary has also been built and passed SDK import checks against **official firmware 1.4.3 (F7 / API 87.1)**. Physical-device checks on that official release remain before catalog submission.
 
 This app uses the low-frequency RFID subsystem. It does not handle 13.56 MHz NFC cards. Some RFID protocols use an ID rather than a facility code; the app shows the fields appropriate to the selected preset.
 
 ## Install and use
 
-[Download RFID Maker v0.7 for Momentum mntm-012](https://github.com/jeremydbean/FlipperRFIDMaker/raw/refs/heads/main/dist/rfid_maker.fap)
+[Download v0.8 for Momentum mntm-012](https://github.com/jeremydbean/FlipperRFIDMaker/raw/refs/heads/main/dist/rfid_maker.fap) · [Download v0.8 for official firmware 1.4.3](https://github.com/jeremydbean/FlipperRFIDMaker/raw/refs/heads/main/dist/official/rfid_maker.fap)
 
-1. Copy `dist/rfid_maker.fap` to `SD/apps/RFID/rfid_maker.fap` using qFlipper or an SD card reader.
-2. Open **Apps â†’ RFID â†’ RFID Maker**.
+1. Download the binary matching your firmware and copy `rfid_maker.fap` to `SD/apps/RFID/rfid_maker.fap` using qFlipper or an SD card reader.
+2. Open **Apps Ã¢â€ â€™ RFID Ã¢â€ â€™ RFID Maker**.
 3. Select a format and edit its decimal fields. Most fields use the numeric keypad. Wide IDs use decimal text entry because Flipper's numeric keypad API is limited to signed 32-bit values.
 4. Select **Show HEX / details** to see the exact bytes that will be stored in the `.rfid` file and the firmware's interpretation of those bytes. Back returns to the fields.
 5. Select **Save .rfid**, enter a name without the extension, and save. Files go to `SD/lfrfid/<name>.rfid`. Existing names are rejected rather than overwritten.
 6. Open the saved file through the normal RFID app, or select **Emulate** here. Back stops emulation.
+7. Select **About** at the bottom of the type menu to see the version and **Created by: KindaCharming** credit.
 
 ## Open and edit an existing file
 
@@ -50,21 +53,21 @@ The included binary targets mntm-012. If your installed firmware reports an API 
 
 | Type | Decimal inputs |
 | --- | --- |
-| HID H10301, 26-bit | FC 0â€“255; card 0â€“65535 |
-| EM4100, RF/64, RF/32, RF/16 | FC 0â€“255; card 0â€“65535; ID prefix 0â€“65535 |
-| Indala, 26-bit | FC 0â€“255; card 0â€“65535 |
-| IO Prox XSF | FC 0â€“255; card 0â€“65535; version 0â€“255 |
-| AWID, 26-bit | FC 0â€“255; card 0â€“65535 |
-| Pyramid, 26-bit | FC 0â€“255; card 0â€“65535 |
-| Gallagher | FC 0â€“65535; card 0â€“16777215; region and issue level 0â€“15 |
-| Keri | FC 0â€“31; card 0â€“4194303 |
-| Securakey, 26-bit | FC 1â€“255; card 0â€“65535; two check bytes 0â€“255 |
-| Viking / PAC/Stanley | Card ID 0â€“4294967295; no facility code |
+| HID H10301, 26-bit | FC 0Ã¢â‚¬â€œ255; card 0Ã¢â‚¬â€œ65535 |
+| EM4100, RF/64, RF/32, RF/16 | FC 0Ã¢â‚¬â€œ255; card 0Ã¢â‚¬â€œ65535; ID prefix 0Ã¢â‚¬â€œ65535 |
+| Indala, 26-bit | FC 0Ã¢â‚¬â€œ255; card 0Ã¢â‚¬â€œ65535 |
+| IO Prox XSF | FC 0Ã¢â‚¬â€œ255; card 0Ã¢â‚¬â€œ65535; version 0Ã¢â‚¬â€œ255 |
+| AWID, 26-bit | FC 0Ã¢â‚¬â€œ255; card 0Ã¢â‚¬â€œ65535 |
+| Pyramid, 26-bit | FC 0Ã¢â‚¬â€œ255; card 0Ã¢â‚¬â€œ65535 |
+| Gallagher | FC 0Ã¢â‚¬â€œ65535; card 0Ã¢â‚¬â€œ16777215; region and issue level 0Ã¢â‚¬â€œ15 |
+| Keri | FC 0Ã¢â‚¬â€œ31; card 0Ã¢â‚¬â€œ4194303 |
+| Securakey, 26-bit | FC 1Ã¢â‚¬â€œ255; card 0Ã¢â‚¬â€œ65535; two check bytes 0Ã¢â‚¬â€œ255 |
+| Viking / PAC/Stanley | Card ID 0Ã¢â‚¬â€œ4294967295; no facility code |
 | Jablotron | 40-bit card data as a decimal integer; no facility code |
 | IDTECK | 32-bit card ID; fixed IDTK factory word |
-| Paradox | FC 0â€“255; card 0â€“65535 |
-| GProx II, 26-bit | FC 0â€“255; card 0â€“65535; profile 0â€“65535 |
-| HID H10306, 34-bit | FC 0â€“65535; card 0â€“65535 |
+| Paradox | FC 0Ã¢â‚¬â€œ255; card 0Ã¢â‚¬â€œ65535 |
+| GProx II, 26-bit | FC 0Ã¢â‚¬â€œ255; card 0Ã¢â‚¬â€œ65535; profile 0Ã¢â‚¬â€œ65535 |
+| HID H10306, 34-bit | FC 0Ã¢â‚¬â€œ65535; card 0Ã¢â‚¬â€œ65535 |
 
 These are **18 presets**. A protocol name does not uniquely identify every possible card layout. AWID and HID can carry other layouts; this app's decimal presets support only the specified layouts.
 
@@ -87,27 +90,54 @@ Data: 96 27 20
 
 See `examples/H10301_FC150_CN10016.rfid`. The HEX preview shows `.rfid` protocol data, not the entire on-air waveform. The selected firmware encoder generates modulation, preambles, and protocol framing. Indala, AWID, Paradox, and GProx II also require conversion logic in this app for their stored payloads.
 
+## Proxmark HEX
+
+**Show HEX / details** displays the `.rfid` data first, then a separate Proxmark value for the supported conversions:
+
+- HID H10301 and H10306: the raw HID ID, including parity and the format-length marker.
+- EM4100 RF/64, RF/32 and RF/16: the complete 40-bit ID used by Proxmark EM410x commands. Those commands encode RF framing separately.
+- Indala26: the 64-bit frame representing the data this app emulates.
+- AWID: the 96-bit frame, including its preamble and group parity.
+
+Other layouts display **Not implemented for this layout**. An advanced HEX import without an exactly recognized decimal preset also uses that message.
+
+H10301 additionally shows **Sheet-style HEX**, matching the convention of a header plus Wiegand payload without the format-length marker. That value differs from the complete Proxmark raw ID. Use **Proxmark raw HEX** when a Proxmark command expects the complete HID ID; the sheet-style value is provided for comparison with existing conversion sheets.
+
+These displays do not change the saved `.rfid` data or the emulated credential. Formatting and protocol definitions follow [Proxmark3](https://github.com/RfidResearchGroup/proxmark3/tree/e6d7cd1f9d330b930073f32cda06e308774cd36d/client/src) and the Flipper firmware encoders. No user credential list is included in the project.
+
 ## Troubleshooting
 
 - **API mismatch:** rebuild with the SDK for your installed firmware. The included download targets mntm-012.
-- **Green LED while emulating:** install the latest binary and confirm the menu says **RFID Maker v0.7**. This version alternates magenta/off with a 10 ms pulse every 100 ms while emulating, including when USB charging is active. Back releases the LED so the normal charging/status indicator can return. Physical-device confirmation of this change is still pending.
+- **Green LED while emulating:** install the latest binary and confirm the menu says **RFID Maker v0.8**. This version alternates magenta/off with a 10 ms pulse every 100 ms while emulating, including when USB charging is active. Back releases the LED so the normal charging/status indicator can return. Physical-device confirmation of this change is still pending.
 - **Imported file opens in HEX:** its data does not exactly match an implemented decimal preset. The app preserves the bytes instead of guessing a facility code and card number.
 - **Filename already exists:** choose a new name. Imported files default to a name ending in `_copy`.
 - **Reader does not accept the card:** verify the exact protocol, layout, and all additional fields. A matching facility code and card number alone may not reproduce the original credential.
 
+## Screenshots
+
+Type menu and decimal fields, exported by the author from qFlipper (v0.7):
+
+![RFID Maker type menu](screenshots/ss0.png)
+
+![HID H10301 decimal fields](screenshots/ss1.png)
+
 ## Flipper Apps Catalog status
 
-RFID Maker is available from this GitHub repository and has **not yet been submitted** to the official Apps Catalog.
+RFID Maker has **not yet been submitted**. Public source, license, icon, metadata, catalog description and changelog are ready. v0.8 builds against official release 1.4.3 and Momentum mntm-012, with SDK import and ARM controller checks passing.
 
-The [catalog contribution guide](https://github.com/flipperdevices/flipper-application-catalog/blob/main/documentation/Contributing.md) requires a public source repository, an open-source license, a uFBT build compatible with the latest official release or release candidate, an icon, qFlipper screenshots, and a changelog. This project already has public source, a license, an icon, and app metadata. Official-firmware validation, device screenshots, and a separate changelog remain before submission.
-
-Submission uses a pull request adding `applications/RFID/rfid_maker/manifest.yml` to the catalog repository. That manifest points to a specific source commit and supplies the description, changelog, and screenshots. After validation and maintainer approval, the app becomes available through the Flipper mobile app and Flipper Lab. See the [manifest specification](https://github.com/flipperdevices/flipper-application-catalog/blob/main/documentation/Manifest.md).
-
-The catalog's content rules also apply. This README currently documents a Momentum build; catalog-facing documentation needs review against those rules before submission. Acceptance is decided by the catalog maintainers.
+Original qFlipper device-screen exports are included unchanged. Physical-device validation on official firmware remains before submission. See the [publishing checklist and manifest template](docs/publishing.md), [catalog description](docs/catalog-description.md), and [changelog](docs/changelog.md).
 
 ## Build
 
-Install Python and `ufbt`, then run inside this source directory:
+Install Python and `ufbt`, then run inside this source directory for official release firmware:
+
+```sh
+python -m pip install ufbt
+ufbt update --channel=release --hw-target=f7
+ufbt
+```
+
+For the Momentum mntm-012 build:
 
 ```sh
 python -m pip install ufbt
@@ -119,14 +149,15 @@ The resulting binary is `dist/rfid_maker.fap`. Use a separate `UFBT_HOME` if you
 
 ## Validation
 
-- Successful build and SDK import check for F7 / API 87.1.
+- Successful builds and SDK import checks for official firmware 1.4.3 and Momentum mntm-012, F7 / API 87.1.
 - The actual ARM C encoders and decoders executed in Unicorn: **1,836 round-trip vectors across all 18 presets**, including minimum/maximum and deterministic random values.
 - Checked against independent Python bit-layout calculations, including Indala parity/checksum, AWID Wiegand parity, Keri bit mapping, Paradox CRC, GProx framing, and HID H10306 framing.
 - Checked invalid field values, wrong buffer sizes, output buffer bounds, and 13 decimal parser cases including 64-bit overflow.
+- Executed 714 Proxmark ID/raw vectors across seven presets, plus 2,004 H10301/H10306 vectors compared with the actual Proxmark3 C packing functions (reference commit e6d7cd1f9d330b930073f32cda06e308774cd36d).
 - Checked 450 arbitrary payloads: successful decimal decoding must preserve every byte; failed decoding must leave the output fields unchanged.
 - Executed the actual ARM import controller with mocked SDK services: valid AWID import, browser cancellation, invalid-file recovery, and unknown-layout fallback. Verified the browser opens after the input callback and the dispatcher stays running.
 - Executed the emulation controller with a modeled notification LED layer: with underlying green active, emulation shows magenta/off pulses, Back restores green and stops the RFID worker, repeated cleanup is harmless, and restart/exit cleanup releases both again. These are software tests; visible behavior on a physical device remains unverified.
-- Hardware UI, SD-card browsing/loading/saving, and reader acceptance **have not been tested on a physical Flipper**. The tests establish generated payloads, not RF performance or reader compatibility.
+- Author-supplied screenshots confirm the v0.7 type menu and decimal form render on a physical Flipper. Official-firmware device checks, complete SD-card workflows, and reader acceptance remain unverified. Software tests establish payloads and controller behavior, not RF performance.
 
 To rerun:
 
@@ -134,6 +165,7 @@ To rerun:
 python -m pip install unicorn pyelftools
 python tests/test_formats.py /path/to/arm-none-eabi-gcc
 python tests/test_import.py /path/to/arm-none-eabi-gcc /path/to/sdk_headers
+python tests/test_proxmark.py /path/to/arm-none-eabi-gcc /path/to/proxmark3-source
 ```
 
 The import regression test accepts an optional local AWID `.rfid` file as its third argument. That file is read in place and is not copied into the project.

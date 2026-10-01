@@ -8,7 +8,7 @@ App(
     stack_size=4096,
     fap_category="RFID",
     fap_icon="icon.png",
-    fap_version="0.7",
-    fap_author="Jeremy Bean",
+    fap_version="0.8",
+    fap_author="KindaCharming",
     fap_description="Create RFID files from decimal facility codes and card numbers",
 )

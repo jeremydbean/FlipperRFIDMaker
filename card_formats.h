@@ -42,3 +42,6 @@ bool card_parse_decimal(const char *text, uint64_t min, uint64_t max, uint64_t *
 bool card_encode(const CardFormat *format, const uint64_t *values, uint8_t *data, size_t size);
 // Accept a decimal form only when re-encoding preserves every stored data byte.
 bool card_decode(const CardFormat *format, const uint8_t *data, size_t size, uint64_t *values);
+// Return bytes in Proxmark's ID/raw representation, or zero for unsupported layouts.
+size_t card_proxmark_raw(const CardFormat *format, const uint8_t *data, size_t size, uint8_t *raw,
+                         size_t capacity);

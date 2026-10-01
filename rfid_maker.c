@@ -29,6 +29,7 @@ enum {
     ActionRaw,
     ActionEditRaw,
     ActionOpen,
+    ActionAbout,
     EventOpen = 1100
 };
 typedef enum {
@@ -41,7 +42,8 @@ typedef enum {
     PageEmulate,
     PageRawTypes,
     PageBytes,
-    PageLoadError
+    PageLoadError,
+    PageAbout
 } Page;
 typedef struct {
     Gui *gui;
@@ -180,6 +182,28 @@ static void preview(Maker *app) {
     for(size_t i = 0; i < app->size; ++i) {
         furi_string_cat_printf(app->display, "%02X%s", app->data[i],
                                ((i + 1) % 8 == 0) ? "\n" : " ");
+    }
+    uint8_t raw[12];
+    size_t raw_size = card_proxmark_raw(app->format, app->data, app->size, raw, sizeof(raw));
+    if(raw_size) {
+        furi_string_cat(app->display, app->format->encoding == CardEm
+                                          ? "\n\nProxmark ID (EM410x):\n"
+                                          : "\n\nProxmark raw HEX:\n");
+        for(size_t i = 0; i < raw_size; ++i)
+            furi_string_cat_printf(app->display, "%02X", raw[i]);
+        if(app->format->encoding == CardHid26) {
+            uint64_t sheet = 0;
+            for(size_t i = 0; i < raw_size; ++i)
+                sheet = (sheet << 8) | raw[i];
+            sheet &= ~(UINT64_C(1) << 26);
+            furi_string_cat_printf(
+                app->display,
+                "\n\nSheet-style HEX:\n%010llX\n"
+                "Omits the HID format marker. Use Proxmark raw HEX above for the complete ID.",
+                sheet);
+        }
+    } else {
+        furi_string_cat(app->display, "\n\nProxmark raw HEX:\nNot implemented for this layout.");
     }
     furi_string_cat(app->display, "\n\nFirmware interpretation:\n");
     if(!furi_string_empty(app->source_path))
@@ -326,6 +350,14 @@ static void menu_callback(void *context, uint32_t index) {
             view_dispatcher_send_custom_event(app->dispatcher, EventOpen);
             return;
         }
+        if(index == ActionAbout) {
+            furi_string_set(app->display,
+                            "RFID Maker v0.8\n\nCreated by: KindaCharming\n\n"
+                            "Create and edit 125 kHz RFID files using decimal values.\n\n"
+                            "GPL-3.0-or-later\n\nBack: type menu");
+            show_text(app, PageAbout);
+            return;
+        }
         if(index == ActionRaw) {
             show_raw_types(app);
             return;
@@ -360,7 +392,7 @@ static void menu_callback(void *context, uint32_t index) {
             app->blink_on = true;
             app->blink_ticks = 0;
             notification_message_block(app->notifications, &rfid_led_on);
-            furi_string_printf(app->display, "Emulating (v0.7)\n\n%s\n\nBack: stop emulation",
+            furi_string_printf(app->display, "Emulating (v0.8)\n\n%s\n\nBack: stop emulation",
                                protocol_dict_get_name(app->dict, app->protocol));
             show_text(app, PageEmulate);
         }
@@ -369,7 +401,7 @@ static void menu_callback(void *context, uint32_t index) {
 static void show_types(Maker *app) {
     app->page = PageTypes;
     submenu_reset(app->menu);
-    submenu_set_header(app->menu, "RFID Maker v0.7");
+    submenu_set_header(app->menu, "RFID Maker v0.8");
     submenu_add_item(app->menu, "Open existing .rfid", ActionOpen, menu_callback, app);
     for(size_t i = 0; i < card_format_count; ++i) {
         ProtocolId id = protocol_dict_get_protocol_by_name(app->dict, card_formats[i].protocol);
@@ -377,6 +409,7 @@ static void show_types(Maker *app) {
             submenu_add_item(app->menu, card_formats[i].label, i, menu_callback, app);
     }
     submenu_add_item(app->menu, "All types (advanced HEX)", ActionRaw, menu_callback, app);
+    submenu_add_item(app->menu, "About", ActionAbout, menu_callback, app);
     view_dispatcher_switch_to_view(app->dispatcher, ViewMenu);
 }
 static void show_raw_types(Maker *app) {
@@ -423,6 +456,7 @@ static bool back_callback(void *context) {
         break;
     case PageRawTypes:
     case PageLoadError:
+    case PageAbout:
         show_types(app);
         break;
     default:
