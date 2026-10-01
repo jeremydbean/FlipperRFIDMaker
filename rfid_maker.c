@@ -251,14 +251,6 @@ static void number_done(void *context, uint64_t value) {
 }
 static bool input_validator(const char *text, FuriString *error, void *context) {
     Maker *app = context;
-    if(app->page == PageField) {
-        const CardField *field = &app->format->fields[app->field];
-        uint64_t n;
-        if(card_parse_decimal(text, field->min, field->max, &n))
-            return true;
-        furi_string_printf(error, "Decimal only\n%llu to %llu", field->min, field->max);
-        return false;
-    }
     if(!*text) {
         furi_string_set(error, "Enter a file name");
         return false;
@@ -484,11 +476,7 @@ static bool custom_callback(void *context, uint32_t event) {
         return true;
     }
     if(event == EventInput) {
-        if(app->page == PageField) {
-            const CardField *field = &app->format->fields[app->field];
-            card_parse_decimal(app->buffer, field->min, field->max, &app->values[app->field]);
-            show_form(app);
-        } else if(app->page == PageName)
+        if(app->page == PageName)
             save_card(app);
         return true;
     }
