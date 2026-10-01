@@ -132,6 +132,10 @@ unsigned test_emulation(void) {
        worker_starts!=1 || emulation_starts!=1 || led[0]!=255 || led[1]!=0 || led[2]!=255) return 0;
     tick_callback(&app);
     if(app.blink_on || led[0] || led[1] || led[2]) return 0;
+    for(unsigned i=0; i<8; ++i) {
+        tick_callback(&app);
+        if(app.blink_on || led[0] || led[1] || led[2]) return 0;
+    }
     tick_callback(&app);
     if(!app.blink_on || led[0]!=255 || led[1]!=0 || led[2]!=255) return 0;
     back_callback(&app);
@@ -219,6 +223,6 @@ def main():
         emu.emu_start(symbols['test_emulation']|1,0x400000,count=1000000)
         assert emu.reg_read(UC_ARM_REG_R0)==1, 'emulation LED/worker lifecycle failed'
         if len(sys.argv)>3: assert sample.read_bytes()==original
-        print('PASS: actual ARM import and emulation controllers: valid AWID, cancel/error/raw fallback; dispatcher stays running; magenta/off ticks override USB green; Back restores charging green; worker start/stop/restart/cleanup lifecycle.')
+        print('PASS: actual ARM import and emulation controllers: valid AWID, cancel/error/raw fallback; dispatcher stays running; 10 ms on / 100 ms period ticks override USB green; Back restores charging green; worker start/stop/restart/cleanup lifecycle.')
 
 if __name__=='__main__': main()

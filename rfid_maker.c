@@ -71,6 +71,7 @@ typedef struct {
     Page page;
     bool emulating;
     bool blink_on;
+    uint8_t blink_ticks;
 } Maker;
 
 // Own all three notification LED channels while emulating, so an underlying
@@ -148,6 +149,7 @@ static void stop_emulating(Maker *app) {
     if(app->emulating) {
         app->emulating = false;
         app->blink_on = false;
+        app->blink_ticks = 0;
         // Wait for app-owned sequences to finish before the FAP can unload.
         notification_message_block(app->notifications, &rfid_led_release);
         lfrfid_worker_stop(app->worker);
@@ -356,8 +358,9 @@ static void menu_callback(void *context, uint32_t index) {
             lfrfid_worker_emulate_start(app->worker, (LFRFIDProtocol)app->protocol);
             app->emulating = true;
             app->blink_on = true;
+            app->blink_ticks = 0;
             notification_message_block(app->notifications, &rfid_led_on);
-            furi_string_printf(app->display, "Emulating (v0.6)\n\n%s\n\nBack: stop emulation",
+            furi_string_printf(app->display, "Emulating (v0.7)\n\n%s\n\nBack: stop emulation",
                                protocol_dict_get_name(app->dict, app->protocol));
             show_text(app, PageEmulate);
         }
@@ -366,7 +369,7 @@ static void menu_callback(void *context, uint32_t index) {
 static void show_types(Maker *app) {
     app->page = PageTypes;
     submenu_reset(app->menu);
-    submenu_set_header(app->menu, "RFID Maker v0.6");
+    submenu_set_header(app->menu, "RFID Maker v0.7");
     submenu_add_item(app->menu, "Open existing .rfid", ActionOpen, menu_callback, app);
     for(size_t i = 0; i < card_format_count; ++i) {
         ProtocolId id = protocol_dict_get_protocol_by_name(app->dict, card_formats[i].protocol);
@@ -453,11 +456,15 @@ static void tick_callback(void *context) {
     Maker *app = context;
     if(!app->emulating)
         return;
-    app->blink_on = !app->blink_on;
-    if(app->blink_on) {
-        notification_message(app->notifications, &rfid_led_on);
-    } else {
+    // Match the standard emulation pulse: 10 ms on in a 100 ms period.
+    ++app->blink_ticks;
+    if(app->blink_ticks == 1) {
+        app->blink_on = false;
         notification_message(app->notifications, &rfid_led_off);
+    } else if(app->blink_ticks == 10) {
+        app->blink_ticks = 0;
+        app->blink_on = true;
+        notification_message(app->notifications, &rfid_led_on);
     }
 }
 int32_t rfid_maker_app(void *p) {
@@ -484,7 +491,7 @@ int32_t rfid_maker_app(void *p) {
     view_dispatcher_set_event_callback_context(app->dispatcher, app);
     view_dispatcher_set_navigation_event_callback(app->dispatcher, back_callback);
     view_dispatcher_set_custom_event_callback(app->dispatcher, custom_callback);
-    view_dispatcher_set_tick_event_callback(app->dispatcher, tick_callback, furi_ms_to_ticks(250));
+    view_dispatcher_set_tick_event_callback(app->dispatcher, tick_callback, furi_ms_to_ticks(10));
     view_dispatcher_add_view(app->dispatcher, ViewMenu, submenu_get_view(app->menu));
     view_dispatcher_add_view(app->dispatcher, ViewInput, text_input_get_view(app->input));
     view_dispatcher_add_view(app->dispatcher, ViewText, text_box_get_view(app->text));

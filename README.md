@@ -18,13 +18,13 @@ RFID Maker provides a decimal alternative to the built-in RFID app's **Add manua
 
 ## Compatibility
 
-The downloadable **v0.6** binary targets **Momentum mntm-012, Flipper Zero F7, API 87.1**. Other firmware versions may require rebuilding against their own SDK. Compatibility with current official firmware has not yet been validated.
+The downloadable **v0.7** binary targets **Momentum mntm-012, Flipper Zero F7, API 87.1**. Other firmware versions may require rebuilding against their own SDK. Compatibility with current official firmware has not yet been validated.
 
 This app uses the low-frequency RFID subsystem. It does not handle 13.56 MHz NFC cards. Some RFID protocols use an ID rather than a facility code; the app shows the fields appropriate to the selected preset.
 
 ## Install and use
 
-[Download RFID Maker v0.6 for Momentum mntm-012](https://github.com/jeremydbean/FlipperRFIDMaker/raw/refs/heads/main/dist/rfid_maker.fap)
+[Download RFID Maker v0.7 for Momentum mntm-012](https://github.com/jeremydbean/FlipperRFIDMaker/raw/refs/heads/main/dist/rfid_maker.fap)
 
 1. Copy `dist/rfid_maker.fap` to `SD/apps/RFID/rfid_maker.fap` using qFlipper or an SD card reader.
 2. Open **Apps â†’ RFID â†’ RFID Maker**.
@@ -90,7 +90,7 @@ See `examples/H10301_FC150_CN10016.rfid`. The HEX preview shows `.rfid` protocol
 ## Troubleshooting
 
 - **API mismatch:** rebuild with the SDK for your installed firmware. The included download targets mntm-012.
-- **Green LED while emulating:** install the latest binary and confirm the menu says **RFID Maker v0.6**. This version alternates magenta/off every 250 ms while emulating, including when USB charging is active. Back releases the LED so the normal charging/status indicator can return. Physical-device confirmation of this change is still pending.
+- **Green LED while emulating:** install the latest binary and confirm the menu says **RFID Maker v0.7**. This version alternates magenta/off with a 10 ms pulse every 100 ms while emulating, including when USB charging is active. Back releases the LED so the normal charging/status indicator can return. Physical-device confirmation of this change is still pending.
 - **Imported file opens in HEX:** its data does not exactly match an implemented decimal preset. The app preserves the bytes instead of guessing a facility code and card number.
 - **Filename already exists:** choose a new name. Imported files default to a name ending in `_copy`.
 - **Reader does not accept the card:** verify the exact protocol, layout, and all additional fields. A matching facility code and card number alone may not reproduce the original credential.
