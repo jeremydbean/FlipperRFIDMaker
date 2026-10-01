@@ -7,6 +7,8 @@
 - Replaced firmware-dependent numeric input with a full-width decimal keypad for all presets, including wide IDs.
 - Displayed the protocol field's allowed range without changing its bit layout or truncating values.
 - Tested all 42 decimal fields across 18 presets, including five-digit Indala card numbers and wide IDs.
+- Documented keypad Save/Del/Back behavior, explicit zero entry, full preset limits and upgrading from the old prefilled-1 input.
+- Updated README and publishing documentation to reflect the v0.9 catalog submission and pending physical-device checks.
 
 ## v0.8
 

@@ -7,7 +7,7 @@ Create and edit 125 kHz RFID files using decimal facility codes and card numbers
 ## Features
 
 - 18 decimal presets with field limits and additional fields where required.
-- Blank new card-number entries and a numeric keypad showing each field's valid range. Typing replaces an existing value; Del edits it.
+- Blank new card-number, card-ID and card-data entries, with no prefilled 1. A numeric keypad supports every decimal field's full valid range. Typing replaces an existing value; Del edits it.
 - Open existing .rfid files and automatically fill supported decimal forms.
 - Preserve unsupported layouts in the advanced HEX editor.
 - Save edited copies without overwriting the original file.
@@ -24,10 +24,13 @@ A protocol can contain several layouts. Decimal conversion supports these preset
 ## Use
 
 - Select a type and enter its decimal fields.
+- Use the numeric keypad's Save button to apply a value. Blank card-number entries must be filled before preview, saving or emulation. Enter zero explicitly if needed; Back cancels an edit.
 - Select **Show HEX / details** to inspect the result.
 - Select **Save .rfid** to save under SD/lfrfid, or **Emulate** to start emulation.
 - Select **Open existing .rfid** to edit a saved file. **Save as .rfid** creates a new copy.
 - Select **About** at the bottom of the type menu for version and creator information.
+
+Indala26 supports card numbers from 0 to 65535. Wider presets retain their own limits, including 32-bit card IDs and 40-bit card data. Values outside the selected layout require the appropriate layout or advanced HEX; the app does not truncate them.
 
 ## License
 

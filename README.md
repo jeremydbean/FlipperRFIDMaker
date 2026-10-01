@@ -37,6 +37,14 @@ This app uses the low-frequency RFID subsystem. It does not handle 13.56 MHz NFC
 6. Open the saved file through the normal RFID app, or select **Emulate** here. Back stops emulation.
 7. Select **About** at the bottom of the type menu to see the version and **Created by: KindaCharming** credit.
 
+### Entering a card number
+
+New card-number, card-ID and card-data fields show **<enter>** and open with an empty keypad. There is no prefilled 1 to delete. Use the arrow keys to select digits and OK to enter them, then select **Save** on the keypad to apply the number. **Del** removes a digit; Back cancels the edit. Blank entries cannot be previewed, saved or emulated. Enter 0 explicitly when zero is the intended value.
+
+When editing an imported or previously entered number, the first digit replaces the whole displayed number. Select **Del** first if you want to remove the final digit and continue editing the existing number.
+
+The keypad accepts the full decimal range of each field, including five-digit card numbers and wider IDs. Its input buffer holds up to 20 decimal digits; each preset still enforces its actual protocol limit and rejects overflow. Indala26 has a 16-bit card-number field, so its maximum is **65535**, not a four-digit limit. A larger printed number or a decimal representation of raw bytes may use a different convention; use the exact RFID payload through import or advanced HEX when it does not fit that preset.
+
 ## Open and edit an existing file
 
 1. Select **Open existing .rfid** at the top of the type menu. The browser starts in `SD/lfrfid` and can navigate elsewhere on the SD card.
@@ -64,8 +72,8 @@ The included binary targets mntm-012. If your installed firmware reports an API 
 | Keri | FC 0-31; card 0-4194303 |
 | Securakey, 26-bit | FC 1-255; card 0-65535; two check bytes 0-255 |
 | Viking / PAC/Stanley | Card ID 0-4294967295; no facility code |
-| Jablotron | 40-bit card data as a decimal integer; no facility code |
-| IDTECK | 32-bit card ID; fixed IDTK factory word |
+| Jablotron | Card data 0-1099511627775 (40 bits); no facility code |
+| IDTECK | Card ID 0-4294967295; fixed IDTK factory word |
 | Paradox | FC 0-255; card 0-65535 |
 | GProx II, 26-bit | FC 0-255; card 0-65535; profile 0-65535 |
 | HID H10306, 34-bit | FC 0-65535; card 0-65535 |
@@ -109,7 +117,9 @@ These displays do not change the saved `.rfid` data or the emulated credential. 
 ## Troubleshooting
 
 - **API mismatch:** rebuild with the SDK for your installed firmware. The included download targets mntm-012.
-- **Green LED while emulating:** install the latest binary and confirm the menu says **RFID Maker v0.8**. This version alternates magenta/off with a 10 ms pulse every 100 ms while emulating, including when USB charging is active. Back releases the LED so the normal charging/status indicator can return. Physical-device confirmation of this change is still pending.
+- **Card number starts with 1 or stops after four digits:** replace the installed FAP with v0.9 and confirm the type menu or About screen shows **0.9**. New card-number entries start blank, and the keypad supports the full range shown for each field.
+- **Number exceeds the displayed maximum:** check the exact card layout and numbering convention. The app rejects values outside that field's bit width; it does not truncate them. Import the original file or use advanced HEX for unsupported layouts.
+- **Green LED while emulating:** install the latest binary and confirm the menu says **RFID Maker v0.9**. This version alternates magenta/off with a 10 ms pulse every 100 ms while emulating, including when USB charging is active. Back releases the LED so the normal charging/status indicator can return. Physical-device confirmation of this change is still pending.
 - **Imported file opens in HEX:** its data does not exactly match an implemented decimal preset. The app preserves the bytes instead of guessing a facility code and card number.
 - **Filename already exists:** choose a new name. Imported files default to a name ending in `_copy`.
 - **Reader does not accept the card:** verify the exact protocol, layout, and all additional fields. A matching facility code and card number alone may not reproduce the original credential.
@@ -124,9 +134,9 @@ Type menu and decimal fields, exported by the author from qFlipper (v0.7):
 
 ## Flipper Apps Catalog status
 
-RFID Maker has **not yet been submitted**. Public source, license, icon, metadata, catalog description and changelog are ready. v0.8 builds against official release 1.4.3 and Momentum mntm-012, with SDK import and ARM controller checks passing.
+RFID Maker v0.9 is **submitted for review** in [PR #1274](https://github.com/flipperdevices/flipper-application-catalog/pull/1274). Submission does not mean the app is approved or available in the catalog. Both official release 1.4.3 and Momentum mntm-012 builds passed SDK import checks, and the pinned v0.9 source passed the catalog bundle validator.
 
-Original qFlipper device-screen exports are included unchanged. Physical-device validation on official firmware remains before submission. See the [publishing checklist and manifest template](docs/publishing.md), [catalog description](docs/catalog-description.md), and [changelog](docs/changelog.md).
+Original qFlipper device-screen exports are included unchanged and show v0.7. Physical-device validation of v0.9 on official firmware remains pending and is disclosed in the submission. See the [publishing status and checklist](docs/publishing.md), [catalog description](docs/catalog-description.md), and [changelog](docs/changelog.md).
 
 ## Build
 
