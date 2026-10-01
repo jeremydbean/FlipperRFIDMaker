@@ -12,6 +12,8 @@
 #include <lfrfid/lfrfid_dict_file.h>
 #include <lfrfid/lfrfid_worker.h>
 #include <lfrfid/protocols/lfrfid_protocols.h>
+#include <notification/notification.h>
+#include <notification/notification_messages.h>
 #include <stdio.h>
 #include <storage/storage.h>
 #include <string.h>
@@ -45,6 +47,7 @@ typedef struct {
     Gui *gui;
     Storage *storage;
     DialogsApp *dialogs;
+    NotificationApp *notifications;
     ViewDispatcher *dispatcher;
     Submenu *menu;
     TextInput *input;
@@ -129,6 +132,7 @@ static void open_card(Maker *app) {
 
 static void stop_emulating(Maker *app) {
     if(app->emulating) {
+        notification_message(app->notifications, &sequence_blink_stop);
         lfrfid_worker_stop(app->worker);
         lfrfid_worker_stop_thread(app->worker);
         app->emulating = false;
@@ -335,6 +339,7 @@ static void menu_callback(void *context, uint32_t index) {
             lfrfid_worker_start_thread(app->worker);
             lfrfid_worker_emulate_start(app->worker, (LFRFIDProtocol)app->protocol);
             app->emulating = true;
+            notification_message(app->notifications, &sequence_blink_start_magenta);
             furi_string_printf(app->display, "Emulating\n\n%s\n\nBack: stop emulation",
                                protocol_dict_get_name(app->dict, app->protocol));
             show_text(app, PageEmulate);
@@ -434,6 +439,7 @@ int32_t rfid_maker_app(void *p) {
     app->gui = furi_record_open(RECORD_GUI);
     app->storage = furi_record_open(RECORD_STORAGE);
     app->dialogs = furi_record_open(RECORD_DIALOGS);
+    app->notifications = furi_record_open(RECORD_NOTIFICATION);
     app->dict = protocol_dict_alloc(lfrfid_protocols, LFRFIDProtocolMax);
     app->worker = lfrfid_worker_alloc(app->dict);
     app->capacity = protocol_dict_get_max_data_size(app->dict);
@@ -475,6 +481,7 @@ int32_t rfid_maker_app(void *p) {
     protocol_dict_free(app->dict);
     furi_record_close(RECORD_STORAGE);
     furi_record_close(RECORD_DIALOGS);
+    furi_record_close(RECORD_NOTIFICATION);
     furi_record_close(RECORD_GUI);
     free(app);
     return 0;

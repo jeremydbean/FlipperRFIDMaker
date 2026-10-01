@@ -6,11 +6,11 @@ A standalone Flipper Zero app for creating 125 kHz RFID files from decimal value
 
 Includes an optional Emulate action. Built against the **Momentum mntm-012 F7 SDK, API 87.1**. This is a separate application, not a change to Momentum's built-in RFID app.
 
-Version 0.4 includes an embedded 10×10 monochrome RFID card icon and opening/editing existing `.rfid` files. It fixes the file-browser transition that stopped the app during import in v0.3.
+Version 0.5 includes an embedded 10×10 monochrome RFID card icon, opening/editing existing `.rfid` files, and the standard magenta LED blink during emulation. Back or app exit stops the blink. It also includes the v0.4 import fix for the file-browser transition that stopped the app in v0.3.
 
 ## Install and use
 
-[Download RFID Maker v0.4 for Momentum mntm-012](https://github.com/jeremydbean/FlipperRFIDMaker/raw/refs/heads/main/dist/rfid_maker.fap)
+[Download RFID Maker v0.5 for Momentum mntm-012](https://github.com/jeremydbean/FlipperRFIDMaker/raw/refs/heads/main/dist/rfid_maker.fap)
 
 1. Copy `dist/rfid_maker.fap` to `SD/apps/RFID/rfid_maker.fap` using qFlipper or an SD card reader.
 2. Open **Apps → RFID → RFID Maker**.
@@ -95,6 +95,7 @@ The resulting binary is `dist/rfid_maker.fap`. Use a separate `UFBT_HOME` if you
 - Checked invalid field values, wrong buffer sizes, output buffer bounds, and 13 decimal parser cases including 64-bit overflow.
 - Checked 450 arbitrary payloads: successful decimal decoding must preserve every byte; failed decoding must leave the output fields unchanged.
 - Executed the actual ARM import controller with mocked SDK services: valid AWID import, browser cancellation, invalid-file recovery, and unknown-layout fallback. Verified the browser opens after the input callback and the dispatcher stays running.
+- Executed the emulation controller with mocked SDK services: start requests the magenta blink, Back stops blinking and the RFID worker, repeated cleanup is harmless, and restarting/exit cleanup stops both again.
 - Hardware UI, SD-card browsing/loading/saving, and reader acceptance **have not been tested on a physical Flipper**. The tests establish generated payloads, not RF performance or reader compatibility.
 
 To rerun:

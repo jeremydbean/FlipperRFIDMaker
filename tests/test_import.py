@@ -23,6 +23,9 @@ HARNESS = r'''
 struct FuriString { char text[512]; };
 static struct FuriString strings[8];
 static unsigned allocated, mode, running, dialog_calls, pending, in_input, bad_callback;
+static unsigned blink_starts, blink_stops, worker_starts, worker_stops, emulation_starts, thread_stops;
+const NotificationSequence sequence_blink_start_magenta = {NULL};
+const NotificationSequence sequence_blink_stop = {NULL};
 uint8_t fixture[9];
 uint32_t state[10];
 
@@ -74,13 +77,47 @@ void submenu_add_item(Submenu* s, const char* label, uint32_t id, SubmenuItemCal
 }
 void text_box_reset(TextBox* b) { (void)b; }
 void text_box_set_text(TextBox* b, const char* text) { (void)b; (void)text; }
+void text_box_set_font(TextBox* b, TextBoxFont font) { (void)b; (void)font; }
 void view_dispatcher_switch_to_view(ViewDispatcher* d, uint32_t id) {
     (void)d; if(id==VIEW_NONE) running=0;
 }
 void view_dispatcher_send_custom_event(ViewDispatcher* d, uint32_t event) { (void)d; pending=event; }
 void view_dispatcher_stop(ViewDispatcher* d) { (void)d; running=0; }
-void lfrfid_worker_stop(LFRFIDWorker* w) { (void)w; }
-void lfrfid_worker_stop_thread(LFRFIDWorker* w) { (void)w; }
+void notification_message(NotificationApp* n, const NotificationSequence* sequence) {
+    (void)n;
+    if(sequence==&sequence_blink_start_magenta) ++blink_starts;
+    if(sequence==&sequence_blink_stop) ++blink_stops;
+}
+void lfrfid_worker_start_thread(LFRFIDWorker* w) { (void)w; ++worker_starts; }
+void lfrfid_worker_emulate_start(LFRFIDWorker* w, LFRFIDProtocol protocol) {
+    (void)w; if(protocol==LFRFIDProtocolAwid) ++emulation_starts;
+}
+void lfrfid_worker_stop(LFRFIDWorker* w) { (void)w; ++worker_stops; }
+void lfrfid_worker_stop_thread(LFRFIDWorker* w) { (void)w; ++thread_stops; }
+void protocol_dict_set_data(ProtocolDict* d, size_t id, const uint8_t* data, size_t n) {
+    (void)d; (void)id; (void)data; (void)n;
+}
+
+unsigned test_emulation(void) {
+    allocated=0; running=1;
+    blink_starts=blink_stops=worker_starts=worker_stops=emulation_starts=thread_stops=0;
+    Maker app; memset(&app,0,sizeof(app));
+    uint8_t data[64]; app.data=data; app.capacity=sizeof(data);
+    app.page=PageForm; app.protocol=LFRFIDProtocolAwid; app.size=9;
+    app.format=&card_formats[6]; app.values[0]=5; app.values[1]=1234;
+    app.display=furi_string_alloc(); app.source_path=furi_string_alloc();
+    menu_callback(&app,ActionEmulate);
+    if(!app.emulating || app.page!=PageEmulate || blink_starts!=1 || blink_stops ||
+       worker_starts!=1 || emulation_starts!=1) return 0;
+    back_callback(&app);
+    if(app.emulating || app.page!=PageForm || blink_stops!=1 || worker_stops!=1 || thread_stops!=1) return 0;
+    stop_emulating(&app);
+    if(blink_stops!=1 || worker_stops!=1 || thread_stops!=1) return 0;
+    menu_callback(&app,ActionEmulate);
+    stop_emulating(&app); // Same cleanup invoked when the app exits.
+    return !app.emulating && blink_starts==2 && blink_stops==2 && worker_starts==2 &&
+           worker_stops==2 && emulation_starts==2 && thread_stops==2;
+}
 
 unsigned test_open(unsigned test_mode) {
     allocated=0; mode=test_mode; running=1; pending=0;
@@ -128,7 +165,7 @@ def main():
                         '-ffunction-sections','-fdata-sections','-fno-builtin','-nostdlib',
                         '-DSTM32WB','-DSTM32WB55xx','-DFURI_NDEBUG','-DNDEBUG',
                         '-I'+str(ROOT),*includes,str(folder/'harness.c'),str(ROOT/'card_formats.c'),
-                        '-Wl,-Ttext=0x10000','-Wl,-e,test_open','-Wl,--gc-sections',
+                        '-Wl,-Ttext=0x10000','-Wl,-e,test_open','-Wl,--gc-sections','-Wl,--undefined=test_emulation',
                         '-Wl,--unresolved-symbols=ignore-all','-o',str(elf_path),'-lgcc'],check=True)
         elf=ELFFile(io.BytesIO(elf_path.read_bytes()))
         symbols={s.name:s['st_value'] for s in elf.get_section_by_name('.symtab').iter_symbols()}
@@ -149,7 +186,10 @@ def main():
                 assert s[4]==0 and s[8]==0, ('cancel/error recovery',s)
             else:
                 assert s[4]==5 and s[5]==999 and s[8]==1, ('unknown format raw fallback',s)
+        emu.reg_write(UC_ARM_REG_SP,0x200000); emu.reg_write(UC_ARM_REG_LR,0x400001)
+        emu.emu_start(symbols['test_emulation']|1,0x400000,count=1000000)
+        assert emu.reg_read(UC_ARM_REG_R0)==1, 'emulation LED/worker lifecycle failed'
         if len(sys.argv)>3: assert sample.read_bytes()==original
-        print('PASS: actual ARM import controller: valid AWID, browser cancel, invalid-file recovery, unknown-layout fallback; dispatcher remains running and browser opens after input callback.')
+        print('PASS: actual ARM import and emulation controllers: valid AWID, cancel/error/raw fallback; dispatcher stays running; magenta blink and worker start/stop/restart/cleanup lifecycle.')
 
 if __name__=='__main__': main()
